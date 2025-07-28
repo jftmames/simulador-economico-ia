@@ -51,9 +51,6 @@
     </div>
 
 <script>
-// --- Lógica de la Aplicación en JavaScript ---
-
-// 1. Datos base (equivalente a cargar_datos_brutos)
 const datos_base = [
     { modelo: 'GPT-4o', fabricante: 'OpenAI', precio_input_usd: 5.0, precio_output_usd: 15.0, mmlu_score: 88.7, open_source: false },
     { modelo: 'Claude 3 Opus', fabricante: 'Anthropic', precio_input_usd: 15.0, precio_output_usd: 75.0, mmlu_score: 86.8, open_source: false },
@@ -61,16 +58,14 @@ const datos_base = [
     { modelo: 'Gemini 1.5 Pro', fabricante: 'Google', precio_input_usd: 7.0, precio_output_usd: 21.0, mmlu_score: 83.7, open_source: false }
 ];
 
-// 2. Lógica de simulación (equivalente a ejecutar_simulacion)
 function ejecutarSimulacion(elasticidad, costo_f, algoritmo) {
-    let df = JSON.parse(JSON.stringify(datos_base)); // Deep copy
+    let df = JSON.parse(JSON.stringify(datos_base));
     const costo_fijo_real = costo_f * 1000000;
     const k_margen = (algoritmo === 'asincrónico') ? 1.0 : 0.5;
 
     df.forEach(d => {
         d.precio_promedio = 0.7 * d.precio_output_usd + 0.3 * d.precio_input_usd;
         d.costo_marginal = d.open_source ? 0.75 : 0.25 * d.precio_promedio;
-        
         let demanda_num = Math.log(d.mmlu_score);
         let demanda_den = d.open_source ? Math.pow(d.costo_marginal, elasticidad) : Math.pow(d.precio_promedio, elasticidad);
         d.demanda_relativa = demanda_den > 0 ? demanda_num / demanda_den : 0;
@@ -89,28 +84,23 @@ function ejecutarSimulacion(elasticidad, costo_f, algoritmo) {
     return df;
 }
 
-// 3. Función principal para actualizar todo el dashboard
 function updateDashboard() {
-    // Obtener valores actuales de los controles
     const elasticidad = parseFloat(document.getElementById('elasticidad-slider').value);
     const costo_fijo = parseInt(document.getElementById('costo-fijo-slider').value);
     const algoritmo = document.getElementById('algoritmo-dropdown').value;
 
-    // Actualizar etiquetas de los sliders
     document.getElementById('elasticidad-value').textContent = elasticidad.toFixed(2);
     document.getElementById('costo-fijo-value').textContent = costo_fijo;
 
-    // Ejecutar simulación
     const df_simulado = ejecutarSimulacion(elasticidad, costo_fijo, algoritmo);
 
-    // --- Actualizar Gráficos ---
     const plotLayout = { 
         plot_bgcolor: '#0E1117', paper_bgcolor: '#0E1117', 
         font: { color: '#FAFAFA' }, xaxis: { gridcolor: '#444' }, yaxis: { gridcolor: '#444' }
     };
     
-    // Gráfico 1: Competencia
-    Plotly.react('graph-competencia', [{
+    // --- CAMBIO CLAVE: Usar Plotly.newPlot en lugar de Plotly.react ---
+    Plotly.newPlot('graph-competencia', [{
         x: df_simulado.map(d => d.precio_promedio),
         y: df_simulado.map(d => d.mmlu_score),
         text: df_simulado.map(d => d.modelo),
@@ -118,13 +108,13 @@ function updateDashboard() {
         textposition: 'top center',
         marker: {
             color: df_simulado.map(d => ({'OpenAI': '#636EFA', 'Anthropic': '#EF553B', 'Meta': '#00CC96', 'Google': '#AB63FA'}[d.fabricante])),
-            size: df_simulado.map(d => d.margen_bruto * 2 + 10), // Escalar tamaño de burbuja
+            size: df_simulado.map(d => d.margen_bruto * 2 + 10),
         }
     }], { ...plotLayout, title: 'Mapa de Competencia (Calidad vs. Precio)' });
 
-    // Gráfico 2: Rentabilidad
     const df_rentabilidad = df_simulado.filter(d => !isNaN(d.umbral_rentabilidad_M_tokens));
-    Plotly.react('graph-rentabilidad', [{
+    // --- CAMBIO CLAVE: Usar Plotly.newPlot en lugar de Plotly.react ---
+    Plotly.newPlot('graph-rentabilidad', [{
         x: df_rentabilidad.map(d => d.modelo),
         y: df_rentabilidad.map(d => d.umbral_rentabilidad_M_tokens),
         type: 'bar',
@@ -133,7 +123,6 @@ function updateDashboard() {
         }
     }], { ...plotLayout, title: 'Volumen Mínimo para Cubrir Costes Fijos', yaxis: {type: 'log', gridcolor: '#444'} });
 
-    // --- Actualizar Tabla ---
     let tableHTML = '<table><thead><tr><th>Modelo</th><th>Precio Promedio</th><th>Margen Bruto</th><th>Umbral Rentabilidad (M Tokens)</th><th>Demanda Relativa</th></tr></thead><tbody>';
     df_simulado.forEach(d => {
         tableHTML += `<tr>
@@ -149,14 +138,11 @@ function updateDashboard() {
     document.getElementById('resultados-header').innerText = `Resultados para Algoritmo: ${algoritmo.charAt(0).toUpperCase() + algoritmo.slice(1)}`;
 }
 
-// 4. Conectar los controles a la función de actualización
 document.getElementById('elasticidad-slider').addEventListener('input', updateDashboard);
 document.getElementById('costo-fijo-slider').addEventListener('input', updateDashboard);
 document.getElementById('algoritmo-dropdown').addEventListener('change', updateDashboard);
 
-// 5. Carga inicial del dashboard
 window.onload = updateDashboard;
-
 </script>
 </body>
 </html>
