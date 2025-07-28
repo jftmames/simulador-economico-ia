@@ -6,51 +6,346 @@
     <title>Simulador Microeconómico de IA</title>
     <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
     <style>
-        body { font-family: sans-serif; display: flex; color: #EAEAEA; background-color: #0E1117; }
-        .sidebar { width: 25%; padding: 20px; }
-        .main-content { width: 75%; padding: 20px; }
-        h1, h3, h4, h5 { color: #FAFAFA; }
-        label { display: block; margin-top: 20px; margin-bottom: 5px; }
-        input[type="range"] { width: 100%; }
-        select { width: 100%; padding: 8px; background-color: #262730; color: #FAFAFA; border: 1px solid #444; border-radius: 5px;}
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #444; }
-        th { font-weight: bold; }
+        :root {
+            --bg-dark: #0E1117;
+            --bg-card: #1E222D;
+            --text-light: #EAEAEA;
+            --text-highlight: #FAFAFA;
+            --border-color: #444;
+            --openai: #636EFA;
+            --anthropic: #EF553B;
+            --meta: #00CC96;
+            --google: #AB63FA;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            color: var(--text-light);
+            background-color: var(--bg-dark);
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #1a1f2d, #0a0e1a);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+        }
+        
+        header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            color: var(--text-highlight);
+            text-align: center;
+        }
+        
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.85;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+        }
+        
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background-color: var(--bg-card);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            height: fit-content;
+        }
+        
+        .sidebar h3 {
+            color: var(--text-highlight);
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.4rem;
+        }
+        
+        .param-group {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(68, 68, 68, 0.4);
+        }
+        
+        .param-group:last-child {
+            border-bottom: none;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .slider-container {
+            margin-bottom: 15px;
+        }
+        
+        .slider-value {
+            font-weight: 600;
+            color: var(--text-highlight);
+            margin-left: 5px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #2D3240;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #636EFA;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(99, 110, 250, 0.5);
+        }
+        
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #262730;
+            color: var(--text-highlight);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+        
+        select:focus {
+            border-color: #636EFA;
+            box-shadow: 0 0 0 2px rgba(99, 110, 250, 0.25);
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .card {
+            background-color: var(--bg-card);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+        }
+        
+        .card h4 {
+            color: var(--text-highlight);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        
+        .graph-container {
+            height: 400px;
+        }
+        
+        .results-header {
+            background: linear-gradient(135deg, #252a3a, #1a1f2d);
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-highlight);
+            border: 1px solid var(--border-color);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(68, 68, 68, 0.4);
+        }
+        
+        th {
+            font-weight: 600;
+            color: var(--text-highlight);
+            background-color: rgba(30, 34, 45, 0.8);
+        }
+        
+        tr:hover {
+            background-color: rgba(40, 45, 60, 0.5);
+        }
+        
+        .fabricante-openai {
+            color: var(--openai);
+        }
+        
+        .fabricante-anthropic {
+            color: var(--anthropic);
+        }
+        
+        .fabricante-meta {
+            color: var(--meta);
+        }
+        
+        .fabricante-google {
+            color: var(--google);
+        }
+        
+        .debug-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(30, 34, 45, 0.5);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .debug-info h5 {
+            color: var(--text-highlight);
+            margin-bottom: 10px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: var(--text-highlight);
+        }
+        
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
-
-    <div class="sidebar">
-        <h3>Parámetros de Simulación</h3>
+    <header>
+        <h1>Simulador Microeconómico de IA Generativa</h1>
+        <p>Analiza el impacto de diferentes parámetros económicos en modelos de inteligencia artificial</p>
+    </header>
+    
+    <div class="container">
+        <div class="sidebar">
+            <h3>Parámetros de Simulación</h3>
+            
+            <div class="param-group">
+                <label for="elasticidad-slider">Elasticidad-Precio: <span id="elasticidad-value" class="slider-value">1.5</span></label>
+                <div class="slider-container">
+                    <input type="range" id="elasticidad-slider" min="0.1" max="3.0" value="1.5" step="0.1">
+                </div>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;">
+                    Mide la sensibilidad de la demanda a cambios en los precios
+                </p>
+            </div>
+            
+            <div class="param-group">
+                <label for="costo-fijo-slider">Coste Fijo (USD Millones): <span id="costo-fijo-value" class="slider-value">1000</span></label>
+                <div class="slider-container">
+                    <input type="range" id="costo-fijo-slider" min="100" max="5000" value="1000" step="100">
+                </div>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;">
+                    Costes operativos fijos para el desarrollo y mantenimiento
+                </p>
+            </div>
+            
+            <div class="param-group">
+                <label for="algoritmo-dropdown">Tipo de Algoritmo de Precios:</label>
+                <select id="algoritmo-dropdown">
+                    <option value="asincrónico">asincrónico</option>
+                    <option value="sincrónico">sincrónico</option>
+                </select>
+                <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;">
+                    Estrategia de precios para maximizar márgenes
+                </p>
+            </div>
+            
+            <div class="debug-info">
+                <h5>Información de Rendimiento</h5>
+                <div class="metric">
+                    <span>Última actualización:</span>
+                    <span id="last-update" class="metric-value">-</span>
+                </div>
+                <div class="metric">
+                    <span>Total de modelos:</span>
+                    <span id="model-count" class="metric-value">4</span>
+                </div>
+                <div class="metric">
+                    <span>Margen promedio:</span>
+                    <span id="avg-margin" class="metric-value">-</span>
+                </div>
+                <div class="metric">
+                    <span>Umbral promedio:</span>
+                    <span id="avg-threshold" class="metric-value">-</span>
+                </div>
+            </div>
+        </div>
         
-        <label for="elasticidad-slider">Elasticidad-Precio: <span id="elasticidad-value">1.5</span></label>
-        <input type="range" id="elasticidad-slider" min="0.1" max="3.0" value="1.5" step="0.1">
-        
-        <label for="costo-fijo-slider">Coste Fijo (USD Millones): <span id="costo-fijo-value">1000</span></label>
-        <input type="range" id="costo-fijo-slider" min="100" max="5000" value="1000" step="100">
-        
-        <label for="algoritmo-dropdown">Tipo de Algoritmo de Precios:</label>
-        <select id="algoritmo-dropdown">
-            <option value="asincrónico">asincrónico</option>
-            <option value="sincrónico">sincrónico</option>
-        </select>
-    </div>
-
-    <div class="main-content">
-        <h1 style="margin-top: 0;">Análisis Microeconómico de Mercados de IA Generativa</h1>
-        <h4 id="resultados-header"></h4>
-        
-        <h5>Mapa de Competencia (Calidad vs. Precio)</h5>
-        <div id="graph-competencia"></div>
-        
-        <h5>Volumen Mínimo para Cubrir Costes Fijos</h5>
-        <div id="graph-rentabilidad"></div>
-        
-        <h5>Métricas Clave Simuladas</h5>
-        <div id="tabla-resultados"></div>
+        <div class="main-content">
+            <div class="results-header" id="resultados-header"></div>
+            
+            <div class="card">
+                <h4>Mapa de Competencia (Calidad vs. Precio)</h4>
+                <div id="graph-competencia" class="graph-container"></div>
+                <p style="margin-top: 15px; opacity: 0.8;">
+                    <strong>Interpretación:</strong> Cada burbuja representa un modelo de IA. El tamaño de la burbuja indica el margen bruto. 
+                    Los modelos en la esquina superior izquierda ofrecen la mejor relación calidad-precio.
+                </p>
+            </div>
+            
+            <div class="card">
+                <h4>Volumen Mínimo para Cubrir Costes Fijos</h4>
+                <div id="graph-rentabilidad" class="graph-container"></div>
+                <p style="margin-top: 15px; opacity: 0.8;">
+                    <strong>Interpretación:</strong> Muestra los millones de tokens que cada modelo necesita procesar para cubrir sus costes fijos. 
+                    Escala logarítmica para mejor visualización.
+                </p>
+            </div>
+            
+            <div class="card">
+                <h4>Métricas Clave Simuladas</h4>
+                <div id="tabla-resultados"></div>
+            </div>
+        </div>
     </div>
 
 <script>
+// Datos base de los modelos de IA
 const datos_base = [
     { modelo: 'GPT-4o', fabricante: 'OpenAI', precio_input_usd: 5.0, precio_output_usd: 15.0, mmlu_score: 88.7, open_source: false },
     { modelo: 'Claude 3 Opus', fabricante: 'Anthropic', precio_input_usd: 15.0, precio_output_usd: 75.0, mmlu_score: 86.8, open_source: false },
@@ -58,24 +353,30 @@ const datos_base = [
     { modelo: 'Gemini 1.5 Pro', fabricante: 'Google', precio_input_usd: 7.0, precio_output_usd: 21.0, mmlu_score: 83.7, open_source: false }
 ];
 
+// Función para ejecutar la simulación
 function ejecutarSimulacion(elasticidad, costo_f, algoritmo) {
     let df = JSON.parse(JSON.stringify(datos_base));
     const costo_fijo_real = costo_f * 1000000;
     const k_margen = (algoritmo === 'asincrónico') ? 1.0 : 0.5;
 
+    // Calcular precio promedio y costo marginal
     df.forEach(d => {
         d.precio_promedio = 0.7 * d.precio_output_usd + 0.3 * d.precio_input_usd;
         d.costo_marginal = d.open_source ? 0.75 : 0.25 * d.precio_promedio;
+        
+        // Calcular demanda relativa
         let demanda_num = Math.log(d.mmlu_score);
         let demanda_den = d.open_source ? Math.pow(d.costo_marginal, elasticidad) : Math.pow(d.precio_promedio, elasticidad);
         d.demanda_relativa = demanda_den > 0 ? demanda_num / demanda_den : 0;
     });
 
+    // Normalizar demanda relativa
     const max_demanda = Math.max(...df.map(d => d.demanda_relativa));
     if (max_demanda > 0) {
         df.forEach(d => d.demanda_relativa /= max_demanda);
     }
     
+    // Calcular margen bruto y umbral de rentabilidad
     df.forEach(d => {
         d.margen_bruto = d.open_source ? 0 : k_margen * (d.precio_promedio - d.costo_marginal);
         d.umbral_rentabilidad_M_tokens = (d.margen_bruto > 0) ? costo_fijo_real / d.margen_bruto : NaN;
@@ -84,65 +385,159 @@ function ejecutarSimulacion(elasticidad, costo_f, algoritmo) {
     return df;
 }
 
+// Función para actualizar el dashboard completo
 function updateDashboard() {
+    // Obtener valores actuales de los controles
     const elasticidad = parseFloat(document.getElementById('elasticidad-slider').value);
     const costo_fijo = parseInt(document.getElementById('costo-fijo-slider').value);
     const algoritmo = document.getElementById('algoritmo-dropdown').value;
 
+    // Actualizar valores mostrados
     document.getElementById('elasticidad-value').textContent = elasticidad.toFixed(2);
     document.getElementById('costo-fijo-value').textContent = costo_fijo;
+    document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
 
+    // Ejecutar simulación
     const df_simulado = ejecutarSimulacion(elasticidad, costo_fijo, algoritmo);
 
-    const plotLayout = { 
-        plot_bgcolor: '#0E1117', paper_bgcolor: '#0E1117', 
-        font: { color: '#FAFAFA' }, xaxis: { gridcolor: '#444' }, yaxis: { gridcolor: '#444' }
-    };
+    // Actualizar información de depuración
+    const nonZeroMargins = df_simulado.filter(d => d.margen_bruto > 0);
+    const avgMargin = nonZeroMargins.length > 0 
+        ? (nonZeroMargins.reduce((sum, d) => sum + d.margen_bruto, 0) / nonZeroMargins.length).toFixed(2)
+        : '0.00';
+        
+    const nonZeroThresholds = df_simulado.filter(d => d.umbral_rentabilidad_M_tokens > 0 && !isNaN(d.umbral_rentabilidad_M_tokens));
+    const avgThreshold = nonZeroThresholds.length > 0 
+        ? Math.round(nonZeroThresholds.reduce((sum, d) => sum + d.umbral_rentabilidad_M_tokens, 0) / nonZeroThresholds.length).toLocaleString()
+        : '0';
     
-    // --- CAMBIO CLAVE: Usar Plotly.newPlot en lugar de Plotly.react ---
-    Plotly.newPlot('graph-competencia', [{
+    document.getElementById('avg-margin').textContent = avgMargin;
+    document.getElementById('avg-threshold').textContent = avgThreshold;
+
+    // Configuración común para gráficos
+    const plotLayout = { 
+        plot_bgcolor: 'rgba(30, 34, 45, 0.5)', 
+        paper_bgcolor: 'rgba(30, 34, 45, 0.5)', 
+        font: { color: '#EAEAEA' }, 
+        xaxis: { gridcolor: '#444', title: { font: { size: 14 } } }, 
+        yaxis: { gridcolor: '#444', title: { font: { size: 14 } } },
+        legend: { orientation: 'h', yanchor: 'bottom', y: -0.25, xanchor: 'center', x: 0.5 },
+        margin: { t: 40, b: 80, l: 60, r: 40 },
+        hoverlabel: { bgcolor: '#2D3240', font: { color: '#EAEAEA' } }
+    };
+
+    // GRÁFICO 1: Mapa de Competencia
+    const trace1 = {
         x: df_simulado.map(d => d.precio_promedio),
         y: df_simulado.map(d => d.mmlu_score),
         text: df_simulado.map(d => d.modelo),
         mode: 'markers+text',
         textposition: 'top center',
+        type: 'scatter',
         marker: {
-            color: df_simulado.map(d => ({'OpenAI': '#636EFA', 'Anthropic': '#EF553B', 'Meta': '#00CC96', 'Google': '#AB63FA'}[d.fabricante])),
-            size: df_simulado.map(d => d.margen_bruto * 2 + 10),
+            color: df_simulado.map(d => {
+                switch(d.fabricante) {
+                    case 'OpenAI': return '#636EFA';
+                    case 'Anthropic': return '#EF553B';
+                    case 'Meta': return '#00CC96';
+                    case 'Google': return '#AB63FA';
+                    default: return '#AAAAAA';
+                }
+            }),
+            size: df_simulado.map(d => d.margen_bruto * 5 + 15),
+            opacity: 0.9
         }
-    }], { ...plotLayout, title: 'Mapa de Competencia (Calidad vs. Precio)' });
+    };
+    
+    const layout1 = {
+        ...plotLayout,
+        title: 'Calidad vs. Precio por Modelo',
+        xaxis: { ...plotLayout.xaxis, title: 'Precio Promedio (USD/M tokens)' },
+        yaxis: { ...plotLayout.yaxis, title: 'Calidad (Puntuación MMLU)' }
+    };
+    
+    Plotly.newPlot('graph-competencia', [trace1], layout1, { responsive: true });
 
+    // GRÁFICO 2: Umbral de Rentabilidad
     const df_rentabilidad = df_simulado.filter(d => !isNaN(d.umbral_rentabilidad_M_tokens));
-    // --- CAMBIO CLAVE: Usar Plotly.newPlot en lugar de Plotly.react ---
-    Plotly.newPlot('graph-rentabilidad', [{
+    const trace2 = {
         x: df_rentabilidad.map(d => d.modelo),
         y: df_rentabilidad.map(d => d.umbral_rentabilidad_M_tokens),
         type: 'bar',
         marker: {
-            color: df_rentabilidad.map(d => ({'OpenAI': '#636EFA', 'Anthropic': '#EF553B', 'Google': '#AB63FA'}[d.fabricante]))
+            color: df_rentabilidad.map(d => {
+                switch(d.fabricante) {
+                    case 'OpenAI': return '#636EFA';
+                    case 'Anthropic': return '#EF553B';
+                    case 'Google': return '#AB63FA';
+                    default: return '#AAAAAA';
+                }
+            })
         }
-    }], { ...plotLayout, title: 'Volumen Mínimo para Cubrir Costes Fijos', yaxis: {type: 'log', gridcolor: '#444'} });
+    };
+    
+    const layout2 = {
+        ...plotLayout,
+        title: 'Millones de Tokens Requeridos para Rentabilidad',
+        yaxis: { 
+            ...plotLayout.yaxis, 
+            type: 'log', 
+            title: 'Millones de Tokens (Escala Logarítmica)',
+            tickformat: ',.0r'
+        }
+    };
+    
+    Plotly.newPlot('graph-rentabilidad', [trace2], layout2, { responsive: true });
 
-    let tableHTML = '<table><thead><tr><th>Modelo</th><th>Precio Promedio</th><th>Margen Bruto</th><th>Umbral Rentabilidad (M Tokens)</th><th>Demanda Relativa</th></tr></thead><tbody>';
+    // TABLA: Métricas clave
+    let tableHTML = `
+    <table>
+        <thead>
+            <tr>
+                <th>Modelo</th>
+                <th>Fabricante</th>
+                <th>Precio Promedio</th>
+                <th>Margen Bruto</th>
+                <th>Umbral Rentabilidad</th>
+                <th>Demanda Relativa</th>
+            </tr>
+        </thead>
+        <tbody>`;
+    
     df_simulado.forEach(d => {
-        tableHTML += `<tr>
-            <td>${d.modelo}</td>
-            <td>${d.precio_promedio.toFixed(2)}</td>
-            <td>${d.margen_bruto.toFixed(2)}</td>
-            <td>${isNaN(d.umbral_rentabilidad_M_tokens) ? '-' : d.umbral_rentabilidad_M_tokens.toLocaleString('es-ES', {maximumFractionDigits:0})}</td>
-            <td>${d.demanda_relativa.toFixed(3)}</td>
-        </tr>`;
+        tableHTML += `
+            <tr>
+                <td>${d.modelo}</td>
+                <td class="fabricante-${d.fabricante.toLowerCase()}">${d.fabricante}</td>
+                <td>${d.precio_promedio.toFixed(2)}</td>
+                <td>${d.margen_bruto.toFixed(2)}</td>
+                <td>${isNaN(d.umbral_rentabilidad_M_tokens) ? '-' : d.umbral_rentabilidad_M_tokens.toLocaleString('es-ES', {maximumFractionDigits:0})}</td>
+                <td>${d.demanda_relativa.toFixed(3)}</td>
+            </tr>`;
     });
+    
     tableHTML += '</tbody></table>';
     document.getElementById('tabla-resultados').innerHTML = tableHTML;
-    document.getElementById('resultados-header').innerText = `Resultados para Algoritmo: ${algoritmo.charAt(0).toUpperCase() + algoritmo.slice(1)}`;
+    
+    // Actualizar encabezado de resultados
+    document.getElementById('resultados-header').innerText = 
+        `Resultados para Algoritmo: ${algoritmo.charAt(0).toUpperCase() + algoritmo.slice(1)} | Elasticidad: ${elasticidad.toFixed(2)} | Coste Fijo: $${costo_fijo}M`;
 }
 
+// Inicializar eventos y dashboard
 document.getElementById('elasticidad-slider').addEventListener('input', updateDashboard);
 document.getElementById('costo-fijo-slider').addEventListener('input', updateDashboard);
 document.getElementById('algoritmo-dropdown').addEventListener('change', updateDashboard);
 
-window.onload = updateDashboard;
+window.addEventListener('load', () => {
+    updateDashboard();
+    
+    // Agregar animación de carga inicial
+    document.body.classList.add('loaded');
+    
+    // Actualizar automáticamente cada 30 segundos para prevenir inactividad
+    setInterval(updateDashboard, 30000);
+});
 </script>
 </body>
 </html>
