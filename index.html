@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Microeconómico de IA</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; color: #EAEAEA; background-color: #0E1117; }
+        .sidebar { width: 25%; padding: 20px; }
+        .main-content { width: 75%; padding: 20px; }
+        h1, h3, h4, h5 { color: #FAFAFA; }
+        label { display: block; margin-top: 20px; margin-bottom: 5px; }
+        input[type="range"] { width: 100%; }
+        select { width: 100%; padding: 8px; background-color: #262730; color: #FAFAFA; border: 1px solid #444; border-radius: 5px;}
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #444; }
+        th { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3>Parámetros de Simulación</h3>
+        
+        <label for="elasticidad-slider">Elasticidad-Precio: <span id="elasticidad-value">1.5</span></label>
+        <input type="range" id="elasticidad-slider" min="0.1" max="3.0" value="1.5" step="0.1">
+        
+        <label for="costo-fijo-slider">Coste Fijo (USD Millones): <span id="costo-fijo-value">1000</span></label>
+        <input type="range" id="costo-fijo-slider" min="100" max="5000" value="1000" step="100">
+        
+        <label for="algoritmo-dropdown">Tipo de Algoritmo de Precios:</label>
+        <select id="algoritmo-dropdown">
+            <option value="asincrónico">asincrónico</option>
+            <option value="sincrónico">sincrónico</option>
+        </select>
+    </div>
+
+    <div class="main-content">
+        <h1 style="margin-top: 0;">Análisis Microeconómico de Mercados de IA Generativa</h1>
+        <h4 id="resultados-header"></h4>
+        
+        <h5>Mapa de Competencia (Calidad vs. Precio)</h5>
+        <div id="graph-competencia"></div>
+        
+        <h5>Volumen Mínimo para Cubrir Costes Fijos</h5>
+        <div id="graph-rentabilidad"></div>
+        
+        <h5>Métricas Clave Simuladas</h5>
+        <div id="tabla-resultados"></div>
+    </div>
+
+<script>
+// --- Lógica de la Aplicación en JavaScript ---
+
+// 1. Datos base (equivalente a cargar_datos_brutos)
+const datos_base = [
+    { modelo: 'GPT-4o', fabricante: 'OpenAI', precio_input_usd: 5.0, precio_output_usd: 15.0, mmlu_score: 88.7, open_source: false },
+    { modelo: 'Claude 3 Opus', fabricante: 'Anthropic', precio_input_usd: 15.0, precio_output_usd: 75.0, mmlu_score: 86.8, open_source: false },
+    { modelo: 'LLaMA 3 70B', fabricante: 'Meta', precio_input_usd: 0.0, precio_output_usd: 0.0, mmlu_score: 82.0, open_source: true },
+    { modelo: 'Gemini 1.5 Pro', fabricante: 'Google', precio_input_usd: 7.0, precio_output_usd: 21.0, mmlu_score: 83.7, open_source: false }
+];
+
+// 2. Lógica de simulación (equivalente a ejecutar_simulacion)
+function ejecutarSimulacion(elasticidad, costo_f, algoritmo) {
+    let df = JSON.parse(JSON.stringify(datos_base)); // Deep copy
+    const costo_fijo_real = costo_f * 1000000;
+    const k_margen = (algoritmo === 'asincrónico') ? 1.0 : 0.5;
+
+    df.forEach(d => {
+        d.precio_promedio = 0.7 * d.precio_output_usd + 0.3 * d.precio_input_usd;
+        d.costo_marginal = d.open_source ? 0.75 : 0.25 * d.precio_promedio;
+        
+        let demanda_num = Math.log(d.mmlu_score);
+        let demanda_den = d.open_source ? Math.pow(d.costo_marginal, elasticidad) : Math.pow(d.precio_promedio, elasticidad);
+        d.demanda_relativa = demanda_den > 0 ? demanda_num / demanda_den : 0;
+    });
+
+    const max_demanda = Math.max(...df.map(d => d.demanda_relativa));
+    if (max_demanda > 0) {
+        df.forEach(d => d.demanda_relativa /= max_demanda);
+    }
+    
+    df.forEach(d => {
+        d.margen_bruto = d.open_source ? 0 : k_margen * (d.precio_promedio - d.costo_marginal);
+        d.umbral_rentabilidad_M_tokens = (d.margen_bruto > 0) ? costo_fijo_real / d.margen_bruto : NaN;
+    });
+
+    return df;
+}
+
+// 3. Función principal para actualizar todo el dashboard
+function updateDashboard() {
+    // Obtener valores actuales de los controles
+    const elasticidad = parseFloat(document.getElementById('elasticidad-slider').value);
+    const costo_fijo = parseInt(document.getElementById('costo-fijo-slider').value);
+    const algoritmo = document.getElementById('algoritmo-dropdown').value;
+
+    // Actualizar etiquetas de los sliders
+    document.getElementById('elasticidad-value').textContent = elasticidad.toFixed(2);
+    document.getElementById('costo-fijo-value').textContent = costo_fijo;
+
+    // Ejecutar simulación
+    const df_simulado = ejecutarSimulacion(elasticidad, costo_fijo, algoritmo);
+
+    // --- Actualizar Gráficos ---
+    const plotLayout = { 
+        plot_bgcolor: '#0E1117', paper_bgcolor: '#0E1117', 
+        font: { color: '#FAFAFA' }, xaxis: { gridcolor: '#444' }, yaxis: { gridcolor: '#444' }
+    };
+    
+    // Gráfico 1: Competencia
+    Plotly.react('graph-competencia', [{
+        x: df_simulado.map(d => d.precio_promedio),
+        y: df_simulado.map(d => d.mmlu_score),
+        text: df_simulado.map(d => d.modelo),
+        mode: 'markers+text',
+        textposition: 'top center',
+        marker: {
+            color: df_simulado.map(d => ({'OpenAI': '#636EFA', 'Anthropic': '#EF553B', 'Meta': '#00CC96', 'Google': '#AB63FA'}[d.fabricante])),
+            size: df_simulado.map(d => d.margen_bruto * 2 + 10), // Escalar tamaño de burbuja
+        }
+    }], { ...plotLayout, title: 'Mapa de Competencia (Calidad vs. Precio)' });
+
+    // Gráfico 2: Rentabilidad
+    const df_rentabilidad = df_simulado.filter(d => !isNaN(d.umbral_rentabilidad_M_tokens));
+    Plotly.react('graph-rentabilidad', [{
+        x: df_rentabilidad.map(d => d.modelo),
+        y: df_rentabilidad.map(d => d.umbral_rentabilidad_M_tokens),
+        type: 'bar',
+        marker: {
+            color: df_rentabilidad.map(d => ({'OpenAI': '#636EFA', 'Anthropic': '#EF553B', 'Google': '#AB63FA'}[d.fabricante]))
+        }
+    }], { ...plotLayout, title: 'Volumen Mínimo para Cubrir Costes Fijos', yaxis: {type: 'log', gridcolor: '#444'} });
+
+    // --- Actualizar Tabla ---
+    let tableHTML = '<table><thead><tr><th>Modelo</th><th>Precio Promedio</th><th>Margen Bruto</th><th>Umbral Rentabilidad (M Tokens)</th><th>Demanda Relativa</th></tr></thead><tbody>';
+    df_simulado.forEach(d => {
+        tableHTML += `<tr>
+            <td>${d.modelo}</td>
+            <td>${d.precio_promedio.toFixed(2)}</td>
+            <td>${d.margen_bruto.toFixed(2)}</td>
+            <td>${isNaN(d.umbral_rentabilidad_M_tokens) ? '-' : d.umbral_rentabilidad_M_tokens.toLocaleString('es-ES', {maximumFractionDigits:0})}</td>
+            <td>${d.demanda_relativa.toFixed(3)}</td>
+        </tr>`;
+    });
+    tableHTML += '</tbody></table>';
+    document.getElementById('tabla-resultados').innerHTML = tableHTML;
+    document.getElementById('resultados-header').innerText = `Resultados para Algoritmo: ${algoritmo.charAt(0).toUpperCase() + algoritmo.slice(1)}`;
+}
+
+// 4. Conectar los controles a la función de actualización
+document.getElementById('elasticidad-slider').addEventListener('input', updateDashboard);
+document.getElementById('costo-fijo-slider').addEventListener('input', updateDashboard);
+document.getElementById('algoritmo-dropdown').addEventListener('change', updateDashboard);
+
+// 5. Carga inicial del dashboard
+window.onload = updateDashboard;
+
+</script>
+</body>
+</html>
