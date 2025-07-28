@@ -385,6 +385,20 @@ function ejecutarSimulacion(elasticidad, costo_f, algoritmo) {
     return df;
 }
 
+// Función para formatear números grandes
+function formatNumber(num) {
+    if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(1) + 'B';
+    }
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+    }
+    return num;
+}
+
 // Función para actualizar el dashboard completo
 function updateDashboard() {
     // Obtener valores actuales de los controles
@@ -426,13 +440,12 @@ function updateDashboard() {
         hoverlabel: { bgcolor: '#2D3240', font: { color: '#EAEAEA' } }
     };
 
-    // GRÁFICO 1: Mapa de Competencia
+    // GRÁFICO 1: Mapa de Competencia - Solución para evitar solapamiento
     const trace1 = {
         x: df_simulado.map(d => d.precio_promedio),
         y: df_simulado.map(d => d.mmlu_score),
         text: df_simulado.map(d => d.modelo),
-        mode: 'markers+text',
-        textposition: 'top center',
+        mode: 'markers',
         type: 'scatter',
         marker: {
             color: df_simulado.map(d => {
@@ -444,7 +457,7 @@ function updateDashboard() {
                     default: return '#AAAAAA';
                 }
             }),
-            size: df_simulado.map(d => d.margen_bruto * 5 + 15),
+            size: df_simulado.map(d => d.margen_bruto * 5 + 20),
             opacity: 0.9
         }
     };
@@ -453,7 +466,28 @@ function updateDashboard() {
         ...plotLayout,
         title: 'Calidad vs. Precio por Modelo',
         xaxis: { ...plotLayout.xaxis, title: 'Precio Promedio (USD/M tokens)' },
-        yaxis: { ...plotLayout.yaxis, title: 'Calidad (Puntuación MMLU)' }
+        yaxis: { ...plotLayout.yaxis, title: 'Calidad (Puntuación MMLU)' },
+        // Solución para evitar solapamiento de texto
+        annotations: df_simulado.map((d, i) => {
+            // Posición dinámica para evitar solapamiento
+            const offset = (d.modelo === 'GPT-4o') ? 1.5 : -1.5;
+            return {
+                x: d.precio_promedio,
+                y: d.mmlu_score + offset,
+                xref: 'x',
+                yref: 'y',
+                text: d.modelo,
+                showarrow: false,
+                font: {
+                    size: 12,
+                    color: '#FAFAFA'
+                },
+                bgcolor: 'rgba(30, 34, 45, 0.7)',
+                bordercolor: 'rgba(255, 255, 255, 0.2)',
+                borderpad: 4,
+                borderwidth: 1
+            };
+        })
     };
     
     Plotly.newPlot('graph-competencia', [trace1], layout1, { responsive: true });
@@ -473,6 +507,13 @@ function updateDashboard() {
                     default: return '#AAAAAA';
                 }
             })
+        },
+        // Solución para mostrar valores grandes sin solapamiento
+        text: df_rentabilidad.map(d => formatNumber(d.umbral_rentabilidad_M_tokens)),
+        textposition: 'auto',
+        textfont: {
+            size: 12,
+            color: '#FAFAFA'
         }
     };
     
@@ -483,7 +524,8 @@ function updateDashboard() {
             ...plotLayout.yaxis, 
             type: 'log', 
             title: 'Millones de Tokens (Escala Logarítmica)',
-            tickformat: ',.0r'
+            tickvals: [1e6, 1e7, 1e8, 1e9, 1e10],
+            ticktext: ['1M', '10M', '100M', '1B', '10B']
         }
     };
     
@@ -511,7 +553,7 @@ function updateDashboard() {
                 <td class="fabricante-${d.fabricante.toLowerCase()}">${d.fabricante}</td>
                 <td>${d.precio_promedio.toFixed(2)}</td>
                 <td>${d.margen_bruto.toFixed(2)}</td>
-                <td>${isNaN(d.umbral_rentabilidad_M_tokens) ? '-' : d.umbral_rentabilidad_M_tokens.toLocaleString('es-ES', {maximumFractionDigits:0})}</td>
+                <td>${isNaN(d.umbral_rentabilidad_M_tokens) ? '-' : formatNumber(d.umbral_rentabilidad_M_tokens)}</td>
                 <td>${d.demanda_relativa.toFixed(3)}</td>
             </tr>`;
     });
